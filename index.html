@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Circle of Fifths Quiz</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <h1>Circle of Fifths Quiz</h1>
+      <p class="subtitle">Major Key Signatures</p>
+
+      <div class="score-bar">
+        <span id="score">Score: 0 / 0</span>
+        <button id="reset-btn" class="reset-btn">Reset</button>
+      </div>
+
+      <div class="settings-bar">
+        <div class="setting">
+          <label for="level-select">Level</label>
+          <select id="level-select">
+            <option value="0">1</option>
+            <option value="1">2</option>
+            <option value="2">3</option>
+            <option value="3">4</option>
+            <option value="4">5</option>
+            <option value="5">6</option>
+          </select>
+        </div>
+        <div class="setting">
+          <label for="mode-select">Mode</label>
+          <select id="mode-select">
+            <option value="major">Major</option>
+            <option value="minor">Minor</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="quiz-card">
+        <div class="prompt">
+          <p>What is the key signature for</p>
+          <h2 id="key-name" class="key-name">C Major</h2>
+        </div>
+
+        <!-- Staff / Key Signature Display -->
+        <div class="staff-container">
+          <svg
+            id="staff-svg"
+            viewBox="0 0 320 180"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <!-- Staff lines -->
+            <line class="staff-line" x1="20" y1="50" x2="300" y2="50" />
+            <line class="staff-line" x1="20" y1="65" x2="300" y2="65" />
+            <line class="staff-line" x1="20" y1="80" x2="300" y2="80" />
+            <line class="staff-line" x1="20" y1="95" x2="300" y2="95" />
+            <line class="staff-line" x1="20" y1="110" x2="300" y2="110" />
+
+            <!-- Treble Clef -->
+            <text
+              x="30"
+              y="120"
+              font-size="100"
+              font-family="Serif, 'Times New Roman', Times, Georgia, serif"
+              fill="#2c3e50"
+              text-anchor="middle"
+            >
+              𝄞
+            </text>
+
+            <!-- Key signature accidentals will be drawn here -->
+            <g id="accidentals-group"></g>
+
+            <!-- Feedback area -->
+            <text
+              id="staff-label"
+              x="160"
+              y="150"
+              text-anchor="middle"
+              class="staff-label"
+            ></text>
+          </svg>
+        </div>
+
+        <!-- Answer Buttons -->
+        <div class="answers">
+          <p class="answer-label">
+            Select all sharps/flats in this key, then click Done:
+          </p>
+          <div class="btn-group">
+            <p class="group-heading">Sharps</p>
+            <div class="btn-row">
+              <button class="toggle-btn" data-note="F♯">F♯</button>
+              <button class="toggle-btn" data-note="C♯">C♯</button>
+              <button class="toggle-btn" data-note="G♯">G♯</button>
+              <button class="toggle-btn" data-note="D♯">D♯</button>
+              <button class="toggle-btn" data-note="A♯">A♯</button>
+              <button class="toggle-btn" data-note="E♯">E♯</button>
+              <button class="toggle-btn" data-note="B♯">B♯</button>
+            </div>
+          </div>
+          <div class="btn-group">
+            <p class="group-heading">Flats</p>
+            <div class="btn-row">
+              <button class="toggle-btn" data-note="B♭">B♭</button>
+              <button class="toggle-btn" data-note="E♭">E♭</button>
+              <button class="toggle-btn" data-note="A♭">A♭</button>
+              <button class="toggle-btn" data-note="D♭">D♭</button>
+              <button class="toggle-btn" data-note="G♭">G♭</button>
+              <button class="toggle-btn" data-note="C♭">C♭</button>
+              <button class="toggle-btn" data-note="F♭">F♭</button>
+            </div>
+          </div>
+          <div class="submit-row">
+            <button id="done-btn" class="done-btn">Done</button>
+          </div>
+        </div>
+
+        <!-- Feedback -->
+        <div id="feedback" class="feedback hidden"></div>
+
+        <!-- Next Button -->
+        <button id="next-btn" class="next-btn hidden">Next Question →</button>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
