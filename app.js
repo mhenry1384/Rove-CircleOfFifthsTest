@@ -172,7 +172,6 @@ let activeKeys = [];
 const keyNameEl = document.getElementById("key-name");
 const scoreEl = document.getElementById("score");
 const feedbackEl = document.getElementById("feedback");
-const nextBtn = document.getElementById("next-btn");
 const resetBtn = document.getElementById("reset-btn");
 const doneBtn = document.getElementById("done-btn");
 const accidentalsG = document.getElementById("accidentals-group");
@@ -307,7 +306,6 @@ function loadQuestion() {
   keyNameEl.textContent = currentKey.name;
   feedbackEl.classList.add("hidden");
   feedbackEl.classList.remove("correct", "incorrect");
-  nextBtn.classList.add("hidden");
   clearStaff();
 
   // Reset buttons
@@ -321,6 +319,7 @@ function loadQuestion() {
     );
   });
   doneBtn.disabled = false;
+  doneBtn.textContent = "Done";
 }
 
 /** Build the active key pool based on level + mode */
@@ -420,7 +419,8 @@ function handleDone() {
       btn.classList.add("missed-mark");
     }
   });
-  doneBtn.disabled = true;
+  doneBtn.disabled = false;
+  doneBtn.textContent = "Next Question →";
 
   if (isCorrect) {
     correct++;
@@ -446,14 +446,18 @@ function handleDone() {
   // Update score
   scoreEl.textContent = `Score: ${correct} / ${total}`;
 
-  // Show next button
-  nextBtn.classList.remove("hidden");
 }
 
 // ── Event Listeners ──
 toggleBtns.forEach((btn) => btn.addEventListener("click", handleToggle));
-doneBtn.addEventListener("click", handleDone);
-nextBtn.addEventListener("click", loadQuestion);
+doneBtn.addEventListener("click", () => {
+  if (answered) {
+    loadQuestion();
+    return;
+  }
+
+  handleDone();
+});
 resetBtn.addEventListener("click", () => {
   correct = 0;
   total = 0;
