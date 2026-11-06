@@ -466,11 +466,42 @@ resetBtn.addEventListener("click", () => {
   resetQuestionCycle();
 });
 
+// ── Saved settings (persist Level + Mode across visits) ──
+const SETTINGS_KEY = "fifths-quiz-settings";
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    const apply = (select, value) => {
+      if (value != null && [...select.options].some((o) => o.value === String(value))) {
+        select.value = String(value);
+      }
+    };
+    apply(levelSelect, saved.level);
+    apply(modeSelect, saved.mode);
+  } catch (e) {
+    // Storage unavailable or corrupt; keep defaults.
+  }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ level: levelSelect.value, mode: modeSelect.value }),
+    );
+  } catch (e) {
+    // Storage unavailable (e.g. private mode); settings just won't persist.
+  }
+}
+
 levelSelect.addEventListener("change", () => {
+  saveSettings();
   resetQuestionCycle();
 });
 
 modeSelect.addEventListener("change", () => {
+  saveSettings();
   resetQuestionCycle();
 });
 
@@ -505,5 +536,6 @@ fitClef();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitClef);
 
 // ── Start ──
+loadSettings();
 buildActiveKeys();
 loadQuestion();
