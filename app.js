@@ -474,6 +474,36 @@ modeSelect.addEventListener("change", () => {
   resetQuestionCycle();
 });
 
+// ── Treble clef sizing ──
+// The 𝄞 glyph comes from whatever font each device has, and those fonts draw
+// it at wildly different sizes and heights. Measure the actual ink of the
+// glyph and scale/position it so it always spans the same box on the staff.
+const CLEF_BOX = { left: 24, top: 33, bottom: 132 };
+
+function fitClef() {
+  const clef = document.getElementById("treble-clef");
+  if (!clef) return;
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (!ctx) return;
+  const size = 100;
+  ctx.font = `${size}px ${clef.getAttribute("font-family")}`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  const m = ctx.measureText("𝄞");
+  const ascent = m.actualBoundingBoxAscent;
+  const descent = m.actualBoundingBoxDescent;
+  if (!(ascent + descent > 0)) return; // browser lacks ink metrics; leave as-is
+  const scale = (CLEF_BOX.bottom - CLEF_BOX.top) / (ascent + descent);
+  clef.setAttribute("font-size", (size * scale).toFixed(2));
+  clef.setAttribute("text-anchor", "start");
+  clef.setAttribute("x", (CLEF_BOX.left + (m.actualBoundingBoxLeft || 0) * scale).toFixed(2));
+  clef.setAttribute("y", (CLEF_BOX.top + ascent * scale).toFixed(2));
+  clef.textContent = "𝄞";
+}
+
+fitClef();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitClef);
+
 // ── Start ──
 buildActiveKeys();
 loadQuestion();
