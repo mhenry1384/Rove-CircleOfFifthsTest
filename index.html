@@ -44,7 +44,7 @@
 
       <div class="quiz-card">
         <div class="prompt">
-          <p>What is the key signature for</p>
+          <p id="prompt-text">What is the key signature for</p>
           <h2 id="key-name" class="key-name">C Major</h2>
         </div>
 
@@ -91,33 +91,37 @@
 
         <!-- Answer Buttons -->
         <div class="answers">
-          <p class="answer-label">
+          <p id="answer-label" class="answer-label">
             Select all sharps/flats in this key, then click Done:
           </p>
-          <div class="btn-group">
-            <p class="group-heading">Sharps</p>
-            <div class="btn-row">
-              <button class="toggle-btn" data-note="A♯">A♯</button>
-              <button class="toggle-btn" data-note="B♯">B♯</button>
-              <button class="toggle-btn" data-note="C♯">C♯</button>
-              <button class="toggle-btn" data-note="D♯">D♯</button>
-              <button class="toggle-btn" data-note="E♯">E♯</button>
-              <button class="toggle-btn" data-note="F♯">F♯</button>
-              <button class="toggle-btn" data-note="G♯">G♯</button>
+          <div id="accidental-answers">
+            <div class="btn-group">
+              <p class="group-heading">Sharps</p>
+              <div class="btn-row">
+                <button class="toggle-btn" data-note="A♯">A♯</button>
+                <button class="toggle-btn" data-note="B♯">B♯</button>
+                <button class="toggle-btn" data-note="C♯">C♯</button>
+                <button class="toggle-btn" data-note="D♯">D♯</button>
+                <button class="toggle-btn" data-note="E♯">E♯</button>
+                <button class="toggle-btn" data-note="F♯">F♯</button>
+                <button class="toggle-btn" data-note="G♯">G♯</button>
+              </div>
+            </div>
+            <div class="btn-group">
+              <p class="group-heading">Flats</p>
+              <div class="btn-row">
+                <button class="toggle-btn" data-note="A♭">A♭</button>
+                <button class="toggle-btn" data-note="B♭">B♭</button>
+                <button class="toggle-btn" data-note="C♭">C♭</button>
+                <button class="toggle-btn" data-note="D♭">D♭</button>
+                <button class="toggle-btn" data-note="E♭">E♭</button>
+                <button class="toggle-btn" data-note="F♭">F♭</button>
+                <button class="toggle-btn" data-note="G♭">G♭</button>
+              </div>
             </div>
           </div>
-          <div class="btn-group">
-            <p class="group-heading">Flats</p>
-            <div class="btn-row">
-              <button class="toggle-btn" data-note="A♭">A♭</button>
-              <button class="toggle-btn" data-note="B♭">B♭</button>
-              <button class="toggle-btn" data-note="C♭">C♭</button>
-              <button class="toggle-btn" data-note="D♭">D♭</button>
-              <button class="toggle-btn" data-note="E♭">E♭</button>
-              <button class="toggle-btn" data-note="F♭">F♭</button>
-              <button class="toggle-btn" data-note="G♭">G♭</button>
-            </div>
-          </div>
+          <!-- Name-the-key pickers (built in app.js) -->
+          <div id="name-answers" class="hidden"></div>
           <div class="submit-row">
             <button id="done-btn" class="done-btn">Done</button>
           </div>

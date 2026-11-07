@@ -167,6 +167,11 @@ let total = 0;
 let usedIndices = [];
 let selectedNotes = new Set();
 let activeKeys = [];
+// "signature": shown a key name, pick its sharps/flats.
+// "name": shown a key signature, name the key(s).
+let questionType = "signature";
+let askedQualities = []; // for "name" questions: ["major"], ["minor"] or both
+let nameChoices = {}; // quality -> { letter, acc }
 
 // ── DOM refs ──
 const keyNameEl = document.getElementById("key-name");
@@ -176,7 +181,11 @@ const resetBtn = document.getElementById("reset-btn");
 const doneBtn = document.getElementById("done-btn");
 const accidentalsG = document.getElementById("accidentals-group");
 const staffLabel = document.getElementById("staff-label");
-const toggleBtns = document.querySelectorAll(".toggle-btn");
+const toggleBtns = document.querySelectorAll("#accidental-answers .toggle-btn");
+const promptTextEl = document.getElementById("prompt-text");
+const answerLabelEl = document.getElementById("answer-label");
+const accidentalAnswersEl = document.getElementById("accidental-answers");
+const nameAnswersEl = document.getElementById("name-answers");
 const levelSelect = document.getElementById("level-select");
 const modeSelect = document.getElementById("mode-select");
 
@@ -246,16 +255,16 @@ function clearStaff() {
 }
 
 /** Render the key signature on the staff */
-function renderKeySignature(key) {
-  renderAccidentals(key.accidentals);
+function renderKeySignature(key, showLabel = true) {
+  renderAccidentals(key.accidentals, showLabel);
 }
 
 /** Render accidentals on the staff from a list of note names */
-function renderAccidentals(notes) {
+function renderAccidentals(notes, showLabel = true) {
   clearStaff();
 
   if (notes.length === 0) {
-    staffLabel.textContent = "No sharps or flats";
+    if (showLabel) staffLabel.textContent = "No sharps or flats";
     return;
   }
 
@@ -280,7 +289,7 @@ function renderAccidentals(notes) {
     pos++;
   });
 
-  staffLabel.textContent = notes.join("  ");
+  if (showLabel) staffLabel.textContent = notes.join("  ");
 }
 
 /** Pick a random key we haven't used yet (cycles through all before repeating) */
@@ -301,9 +310,9 @@ function loadQuestion() {
   answered = false;
   selectedNotes.clear();
   currentKey = pickKey();
+  questionType = Math.random() < 0.5 ? "signature" : "name";
 
   // Update UI
-  keyNameEl.textContent = currentKey.name;
   feedbackEl.classList.add("hidden");
   feedbackEl.classList.remove("correct", "incorrect");
   clearStaff();
@@ -318,8 +327,158 @@ function loadQuestion() {
       "missed-mark",
     );
   });
-  doneBtn.disabled = false;
   doneBtn.textContent = "Done";
+
+  if (questionType === "signature") {
+    promptTextEl.textContent = "What is the key signature for";
+    keyNameEl.textContent = currentKey.name;
+    keyNameEl.classList.remove("hidden");
+    answerLabelEl.textContent =
+      "Select all sharps/flats in this key, then click Done:";
+    accidentalAnswersEl.classList.remove("hidden");
+    nameAnswersEl.classList.add("hidden");
+    doneBtn.disabled = false;
+  } else {
+    const mode = modeSelect.value;
+    askedQualities = mode === "both" ? ["major", "minor"] : [mode];
+    promptTextEl.textContent =
+      askedQualities.length === 2
+        ? "Which major and minor keys have this key signature?"
+        : `Which ${askedQualities[0]} key has this key signature?`;
+    keyNameEl.classList.add("hidden");
+    answerLabelEl.textContent = "Pick the key name, then click Done:";
+    accidentalAnswersEl.classList.add("hidden");
+    nameAnswersEl.classList.remove("hidden");
+    buildNamePickers();
+    // No note names under the staff: the player has to read it.
+    renderKeySignature(currentKey, false);
+    updateNameDoneState();
+  }
+}
+
+// ── Name-the-key question ──
+const LETTERS = ["A", "B", "C", "D", "E", "F", "G"];
+const ACCS = ["♭", "♮", "♯"];
+const QUALITY_LABEL = { major: "Major", minor: "Minor" };
+
+/** Tonic of a key name, e.g. "B♭ Major" -> "B♭" */
+function tonicOf(keyName) {
+  return keyName.split(" ")[0];
+}
+
+/** Build the letter + accidental pickers for each asked quality */
+function buildNamePickers() {
+  nameAnswersEl.innerHTML = "";
+  nameChoices = {};
+
+  askedQualities.forEach((quality) => {
+    nameChoices[quality] = { letter: null, acc: "♮" };
+
+    const group = document.createElement("div");
+    group.className = "btn-group name-picker";
+    group.dataset.quality = quality;
+
+    const heading = document.createElement("p");
+    heading.className = "group-heading";
+    group.appendChild(heading);
+
+    const letterRow = document.createElement("div");
+    letterRow.className = "btn-row";
+    LETTERS.forEach((letter) => {
+      const btn = document.createElement("button");
+      btn.className = "toggle-btn";
+      btn.dataset.letter = letter;
+      btn.textContent = letter;
+      btn.addEventListener("click", () => chooseName(quality, "letter", letter));
+      letterRow.appendChild(btn);
+    });
+    group.appendChild(letterRow);
+
+    const accRow = document.createElement("div");
+    accRow.className = "btn-row acc-row";
+    ACCS.forEach((acc) => {
+      const btn = document.createElement("button");
+      btn.className = "toggle-btn";
+      btn.dataset.acc = acc;
+      btn.textContent = acc;
+      btn.addEventListener("click", () => chooseName(quality, "acc", acc));
+      accRow.appendChild(btn);
+    });
+    group.appendChild(accRow);
+
+    nameAnswersEl.appendChild(group);
+    refreshPicker(quality);
+  });
+}
+
+function pickerFor(quality) {
+  return nameAnswersEl.querySelector(`.name-picker[data-quality="${quality}"]`);
+}
+
+function chosenTonic(quality) {
+  const c = nameChoices[quality];
+  if (!c.letter) return null;
+  return c.letter + (c.acc === "♮" ? "" : c.acc);
+}
+
+/** Sync a picker's selected buttons + heading with nameChoices */
+function refreshPicker(quality) {
+  const group = pickerFor(quality);
+  const c = nameChoices[quality];
+  group.querySelectorAll("[data-letter]").forEach((btn) => {
+    btn.classList.toggle("selected", btn.dataset.letter === c.letter);
+  });
+  group.querySelectorAll("[data-acc]").forEach((btn) => {
+    btn.classList.toggle("selected", btn.dataset.acc === c.acc);
+  });
+  const tonic = chosenTonic(quality);
+  const label = QUALITY_LABEL[quality];
+  group.querySelector(".group-heading").textContent =
+    `${label} key: ${tonic ? `${tonic} ${label}` : "?"}`;
+}
+
+function chooseName(quality, field, value) {
+  if (answered) return;
+  nameChoices[quality][field] = value;
+  refreshPicker(quality);
+  updateNameDoneState();
+}
+
+function updateNameDoneState() {
+  doneBtn.disabled = askedQualities.some((q) => !nameChoices[q].letter);
+}
+
+function correctNameFor(quality) {
+  return signatureByMajor.get(currentKey.major)[quality];
+}
+
+/** Grade a name-the-key question; returns true if every asked key is right */
+function gradeName() {
+  let allRight = true;
+
+  askedQualities.forEach((quality) => {
+    const group = pickerFor(quality);
+    const c = nameChoices[quality];
+    const answer = tonicOf(correctNameFor(quality));
+    const ansLetter = answer[0];
+    const ansAcc = answer[1] || "♮";
+    if (c.letter !== ansLetter || c.acc !== ansAcc) allRight = false;
+
+    const mark = (btns, chosen, right) => {
+      btns.forEach((btn) => {
+        const v = btn.dataset.letter || btn.dataset.acc;
+        btn.disabled = true;
+        btn.classList.remove("selected");
+        if (v === chosen && v === right) btn.classList.add("correct-mark");
+        else if (v === chosen) btn.classList.add("incorrect-mark");
+        else if (v === right) btn.classList.add("missed-mark");
+      });
+    };
+    mark(group.querySelectorAll("[data-letter]"), c.letter, ansLetter);
+    mark(group.querySelectorAll("[data-acc]"), c.acc, ansAcc);
+  });
+
+  return allRight;
 }
 
 /** Build the active key pool based on level + mode */
@@ -336,6 +495,7 @@ function buildActiveKeys() {
     if (mode === "major" || mode === "both") {
       pool.push({
         name: sig.major,
+        major: sig.major,
         accidentals: sig.accidentals,
         type:
           sig.accidentals.length === 0
@@ -349,6 +509,7 @@ function buildActiveKeys() {
     if (mode === "minor" || mode === "both") {
       pool.push({
         name: sig.minor,
+        major: sig.major,
         accidentals: sig.accidentals,
         type:
           sig.accidentals.length === 0
@@ -391,6 +552,10 @@ function handleToggle(e) {
 /** Handle Done button click */
 function handleDone() {
   if (answered) return;
+  if (questionType === "name") {
+    handleNameDone();
+    return;
+  }
   answered = true;
   total++;
 
@@ -446,6 +611,36 @@ function handleDone() {
   // Update score
   scoreEl.textContent = `Score: ${correct} / ${total}`;
 
+}
+
+/** Handle Done for a name-the-key question */
+function handleNameDone() {
+  answered = true;
+  total++;
+
+  const isCorrect = gradeName();
+  renderKeySignature(currentKey); // now reveal the note names
+  if (isCorrect) correct++;
+
+  doneBtn.disabled = false;
+  doneBtn.textContent = "Next Question →";
+
+  const answers = askedQualities.map(correctNameFor).join(" / ");
+  const sigText =
+    currentKey.accidentals.length === 0
+      ? "No sharps or flats"
+      : currentKey.accidentals.join(", ");
+
+  feedbackEl.classList.remove("hidden");
+  if (isCorrect) {
+    feedbackEl.classList.add("correct");
+    feedbackEl.textContent = `✅  Correct! ${answers}`;
+  } else {
+    feedbackEl.classList.add("incorrect");
+    feedbackEl.textContent = `❌  Not quite — ${sigText} is ${answers}.`;
+  }
+
+  scoreEl.textContent = `Score: ${correct} / ${total}`;
 }
 
 // ── Event Listeners ──
