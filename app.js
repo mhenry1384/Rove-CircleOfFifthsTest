@@ -164,7 +164,13 @@ let currentKey = null;
 let answered = false;
 let correct = 0;
 let total = 0;
-let usedIndices = [];
+// Every distinct question for the current level/mode, and the ones not yet
+// asked this round. A question is only asked again after the whole round has
+// been used up, unless it was answered wrong (then it goes back in the pile).
+let questionPool = [];
+let remainingQuestions = [];
+let lastQuestionId = null;
+let currentQuestion = null;
 let selectedNotes = new Set();
 let activeKeys = [];
 // "signature": shown a key name, pick its sharps/flats.
@@ -187,7 +193,8 @@ const answerLabelEl = document.getElementById("answer-label");
 const accidentalAnswersEl = document.getElementById("accidental-answers");
 const nameAnswersEl = document.getElementById("name-answers");
 const levelSelect = document.getElementById("level-select");
-const modeSelect = document.getElementById("mode-select");
+const modeButtons = document.querySelectorAll(".mode-button[data-mode]");
+let mode = "major"; // "major" | "minor" | "both"
 
 // ── Helpers ──
 
@@ -292,25 +299,50 @@ function renderAccidentals(notes, showLabel = true) {
   if (showLabel) staffLabel.textContent = notes.join("  ");
 }
 
-/** Pick a random key we haven't used yet (cycles through all before repeating) */
-function pickKey() {
-  if (usedIndices.length === activeKeys.length) {
-    usedIndices = [];
+/** Build every distinct question for the active keys.
+ *  "signature" questions: one per key name.
+ *  "name" questions: one per key signature (in Both mode, C Major and
+ *  A Minor share a signature, so that's a single question). */
+function buildQuestionPool() {
+  const pool = [];
+  const namedSigs = new Set();
+  activeKeys.forEach((key) => {
+    pool.push({ id: `signature:${key.name}`, type: "signature", key });
+    if (!namedSigs.has(key.major)) {
+      namedSigs.add(key.major);
+      pool.push({ id: `name:${key.major}`, type: "name", key });
+    }
+  });
+  questionPool = pool;
+  remainingQuestions = [...pool];
+}
+
+/** Draw a random question not yet asked this round (never the one just asked) */
+function pickQuestion() {
+  if (remainingQuestions.length === 0) remainingQuestions = [...questionPool];
+  let choices = remainingQuestions.filter((q) => q.id !== lastQuestionId);
+  if (choices.length === 0) choices = remainingQuestions;
+  const q = choices[Math.floor(Math.random() * choices.length)];
+  remainingQuestions.splice(remainingQuestions.indexOf(q), 1);
+  lastQuestionId = q.id;
+  return q;
+}
+
+/** A missed question goes back in the pile so it comes up again */
+function requeueIfWrong(isCorrect) {
+  if (isCorrect || !currentQuestion) return;
+  if (!remainingQuestions.includes(currentQuestion)) {
+    remainingQuestions.push(currentQuestion);
   }
-  const available = activeKeys
-    .map((_, i) => i)
-    .filter((i) => !usedIndices.includes(i));
-  const idx = available[Math.floor(Math.random() * available.length)];
-  usedIndices.push(idx);
-  return activeKeys[idx];
 }
 
 /** Load a new question */
 function loadQuestion() {
   answered = false;
   selectedNotes.clear();
-  currentKey = pickKey();
-  questionType = Math.random() < 0.5 ? "signature" : "name";
+  currentQuestion = pickQuestion();
+  currentKey = currentQuestion.key;
+  questionType = currentQuestion.type;
 
   // Update UI
   feedbackEl.classList.add("hidden");
@@ -339,7 +371,6 @@ function loadQuestion() {
     nameAnswersEl.classList.add("hidden");
     doneBtn.disabled = false;
   } else {
-    const mode = modeSelect.value;
     askedQualities = mode === "both" ? ["major", "minor"] : [mode];
     promptTextEl.textContent =
       askedQualities.length === 2
@@ -484,7 +515,6 @@ function gradeName() {
 /** Build the active key pool based on level + mode */
 function buildActiveKeys() {
   const levelIdx = Number(levelSelect.value);
-  const mode = modeSelect.value;
   const majors = LEVELS[levelIdx] || LEVELS[0];
 
   const pool = [];
@@ -522,10 +552,11 @@ function buildActiveKeys() {
   });
 
   activeKeys = pool;
+  buildQuestionPool();
 }
 
 function resetQuestionCycle() {
-  usedIndices = [];
+  lastQuestionId = null;
   buildActiveKeys();
   loadQuestion();
 }
@@ -590,6 +621,7 @@ function handleDone() {
   if (isCorrect) {
     correct++;
   }
+  requeueIfWrong(isCorrect);
 
   // Render the correct key signature on the staff
   renderKeySignature(currentKey);
@@ -621,6 +653,7 @@ function handleNameDone() {
   const isCorrect = gradeName();
   renderKeySignature(currentKey); // now reveal the note names
   if (isCorrect) correct++;
+  requeueIfWrong(isCorrect);
 
   doneBtn.disabled = false;
   doneBtn.textContent = "Next Question →";
@@ -656,7 +689,6 @@ doneBtn.addEventListener("click", () => {
 resetBtn.addEventListener("click", () => {
   correct = 0;
   total = 0;
-  usedIndices = [];
   scoreEl.textContent = "Score: 0 / 0";
   resetQuestionCycle();
 });
@@ -673,7 +705,7 @@ function loadSettings() {
       }
     };
     apply(levelSelect, saved.level);
-    apply(modeSelect, saved.mode);
+    if (["major", "minor", "both"].includes(saved.mode)) setMode(saved.mode);
   } catch (e) {
     // Storage unavailable or corrupt; keep defaults.
   }
@@ -683,7 +715,7 @@ function saveSettings() {
   try {
     localStorage.setItem(
       SETTINGS_KEY,
-      JSON.stringify({ level: levelSelect.value, mode: modeSelect.value }),
+      JSON.stringify({ level: levelSelect.value, mode }),
     );
   } catch (e) {
     // Storage unavailable (e.g. private mode); settings just won't persist.
@@ -695,10 +727,21 @@ levelSelect.addEventListener("change", () => {
   resetQuestionCycle();
 });
 
-modeSelect.addEventListener("change", () => {
-  saveSettings();
-  resetQuestionCycle();
-});
+function setMode(value) {
+  mode = value;
+  modeButtons.forEach((btn) => {
+    btn.setAttribute("aria-pressed", String(btn.dataset.mode === mode));
+  });
+}
+
+modeButtons.forEach((btn) =>
+  btn.addEventListener("click", () => {
+    if (btn.dataset.mode === mode) return;
+    setMode(btn.dataset.mode);
+    saveSettings();
+    resetQuestionCycle();
+  }),
+);
 
 // ── Treble clef sizing ──
 // The 𝄞 glyph comes from whatever font each device has, and those fonts draw

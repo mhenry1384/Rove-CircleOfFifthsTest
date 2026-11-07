@@ -33,12 +33,12 @@
           </select>
         </div>
         <div class="setting">
-          <label for="mode-select">Mode</label>
-          <select id="mode-select">
-            <option value="major">Major</option>
-            <option value="minor">Minor</option>
-            <option value="both">Both</option>
-          </select>
+          <span class="setting-label">Mode</span>
+          <div class="mode-switch" role="group" aria-label="Choose major or minor keys">
+            <button class="mode-button" type="button" data-mode="major" aria-pressed="true">Major</button>
+            <button class="mode-button" type="button" data-mode="minor" aria-pressed="false">Minor</button>
+            <button class="mode-button" type="button" data-mode="both" aria-pressed="false">Both</button>
+          </div>
         </div>
       </div>
 
