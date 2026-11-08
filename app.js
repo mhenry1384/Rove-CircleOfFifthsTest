@@ -363,7 +363,7 @@ function loadQuestion() {
 
   if (questionType === "signature") {
     promptTextEl.textContent = "What is the key signature for";
-    keyNameEl.textContent = currentKey.name;
+    keyNameEl.textContent = displayKeyName(currentKey.name);
     keyNameEl.classList.remove("hidden");
     answerLabelEl.textContent =
       "Select all sharps/flats in this key, then click Done:";
@@ -392,6 +392,13 @@ const LETTERS = ["A", "B", "C", "D", "E", "F", "G"];
 const ACCS = ["♭", "♮", "♯"];
 const QUALITY_LABEL = { major: "Major", minor: "Minor" };
 
+/** Key name as shown to the player: minor keys get a lowercase letter */
+function displayKeyName(keyName) {
+  return keyName.endsWith("Minor")
+    ? keyName[0].toLowerCase() + keyName.slice(1)
+    : keyName;
+}
+
 /** Tonic of a key name, e.g. "B♭ Major" -> "B♭" */
 function tonicOf(keyName) {
   return keyName.split(" ")[0];
@@ -419,7 +426,7 @@ function buildNamePickers() {
       const btn = document.createElement("button");
       btn.className = "toggle-btn";
       btn.dataset.letter = letter;
-      btn.textContent = letter;
+      btn.textContent = quality === "minor" ? letter.toLowerCase() : letter;
       btn.addEventListener("click", () => chooseName(quality, "letter", letter));
       letterRow.appendChild(btn);
     });
@@ -465,7 +472,7 @@ function refreshPicker(quality) {
   const tonic = chosenTonic(quality);
   const label = QUALITY_LABEL[quality];
   group.querySelector(".group-heading").textContent =
-    `${label} key: ${tonic ? `${tonic} ${label}` : "?"}`;
+    `${label} key: ${tonic ? displayKeyName(`${tonic} ${label}`) : "?"}`;
 }
 
 function chooseName(quality, field, value) {
@@ -634,9 +641,9 @@ function handleDone() {
   } else {
     feedbackEl.classList.add("incorrect");
     if (correctArr.length === 0) {
-      feedbackEl.textContent = `❌  Not quite — ${currentKey.name} has no sharps or flats.`;
+      feedbackEl.textContent = `❌  Not quite — ${displayKeyName(currentKey.name)} has no sharps or flats.`;
     } else {
-      feedbackEl.textContent = `❌  Not quite — ${currentKey.name} has ${correctArr.join(", ")}.`;
+      feedbackEl.textContent = `❌  Not quite — ${displayKeyName(currentKey.name)} has ${correctArr.join(", ")}.`;
     }
   }
 
@@ -658,7 +665,9 @@ function handleNameDone() {
   doneBtn.disabled = false;
   doneBtn.textContent = "Next Question →";
 
-  const answers = askedQualities.map(correctNameFor).join(" / ");
+  const answers = askedQualities
+    .map((quality) => displayKeyName(correctNameFor(quality)))
+    .join(" / ");
   const sigText =
     currentKey.accidentals.length === 0
       ? "No sharps or flats"
@@ -742,6 +751,83 @@ modeButtons.forEach((btn) =>
     resetQuestionCycle();
   }),
 );
+
+// ── Stopwatch ──
+// Elapsed time is added up tick by tick and saved as it goes, so it survives a
+// refresh, and time while the app is closed doesn't count.
+const STOPWATCH_KEY = "fifths-quiz-stopwatch";
+const stopwatchTimeEl = document.getElementById("stopwatch-time");
+const stopwatchToggleBtn = document.getElementById("stopwatch-toggle");
+const stopwatchResetBtn = document.getElementById("stopwatch-reset");
+let stopwatchElapsed = 0; // ms
+let stopwatchRunning = false;
+let stopwatchLastTick = 0;
+let stopwatchTimer = null;
+
+function formatStopwatch(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${seconds}`
+    : `${minutes}:${seconds}`;
+}
+
+function updateStopwatch() {
+  stopwatchTimeEl.textContent = formatStopwatch(stopwatchElapsed);
+  stopwatchToggleBtn.textContent = stopwatchRunning ? "Pause" : "Start";
+  try {
+    localStorage.setItem(
+      STOPWATCH_KEY,
+      JSON.stringify({ elapsed: stopwatchElapsed, running: stopwatchRunning }),
+    );
+  } catch (e) {
+    // Storage unavailable; the stopwatch just won't persist.
+  }
+}
+
+function tickStopwatch() {
+  const now = Date.now();
+  stopwatchElapsed += Math.max(0, now - stopwatchLastTick);
+  stopwatchLastTick = now;
+  updateStopwatch();
+}
+
+function setStopwatchRunning(running) {
+  stopwatchRunning = running;
+  clearInterval(stopwatchTimer);
+  if (running) {
+    stopwatchLastTick = Date.now();
+    stopwatchTimer = setInterval(tickStopwatch, 250);
+  }
+  updateStopwatch();
+}
+
+function loadStopwatch() {
+  let saved = {};
+  try {
+    saved = JSON.parse(localStorage.getItem(STOPWATCH_KEY) || "{}") || {};
+  } catch (e) {
+    // Storage unavailable or corrupt; start from zero.
+  }
+  if (Number.isFinite(saved.elapsed) && saved.elapsed > 0) {
+    stopwatchElapsed = saved.elapsed;
+  }
+  setStopwatchRunning(saved.running === true);
+}
+
+stopwatchToggleBtn.addEventListener("click", () => {
+  if (stopwatchRunning) tickStopwatch(); // count the time since the last tick
+  setStopwatchRunning(!stopwatchRunning);
+});
+
+stopwatchResetBtn.addEventListener("click", () => {
+  stopwatchElapsed = 0;
+  setStopwatchRunning(false);
+});
+
+loadStopwatch();
 
 // ── Treble clef sizing ──
 // The 𝄞 glyph comes from whatever font each device has, and those fonts draw

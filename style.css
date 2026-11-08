@@ -75,6 +75,26 @@ h1 {
   background: rgba(255,255,255,0.4);
 }
 
+/* ── Stopwatch ── */
+.stopwatch {
+  margin: 20px 0 0;
+}
+
+.stopwatch-time {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stopwatch-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Same width for "Start" and "Pause", so Reset doesn't jump */
+.stopwatch-toggle {
+  min-width: 72px;
+}
+
 /* ── Settings Bar ── */
 .settings-bar {
   display: flex;
@@ -263,10 +283,14 @@ h1 {
   user-select: none;
 }
 
-.toggle-btn:hover:not(:disabled) {
-  background: #e3e8f0;
-  border-color: #667eea;
-  transform: translateY(-1px);
+/* Hover only where there's a real pointer: on touch screens it sticks to the
+   last button tapped. */
+@media (hover: hover) {
+  .toggle-btn:hover:not(:disabled):not(.selected) {
+    background: #e3e8f0;
+    border-color: #667eea;
+    transform: translateY(-1px);
+  }
 }
 
 .toggle-btn.selected {
@@ -408,6 +432,11 @@ h1 {
   max-width: 50%;
   margin-left: auto;
   margin-right: auto;
+}
+
+/* Keep the letter's case visible: lowercase means minor */
+.name-picker .group-heading {
+  text-transform: none;
 }
 
 .name-picker + .name-picker {
