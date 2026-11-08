@@ -392,11 +392,9 @@ const LETTERS = ["A", "B", "C", "D", "E", "F", "G"];
 const ACCS = ["♭", "♮", "♯"];
 const QUALITY_LABEL = { major: "Major", minor: "Minor" };
 
-/** Key name as shown to the player: minor keys get a lowercase letter */
+/** Key name as shown to the player: minor keys are all lowercase */
 function displayKeyName(keyName) {
-  return keyName.endsWith("Minor")
-    ? keyName[0].toLowerCase() + keyName.slice(1)
-    : keyName;
+  return keyName.endsWith("Minor") ? keyName.toLowerCase() : keyName;
 }
 
 /** Tonic of a key name, e.g. "B♭ Major" -> "B♭" */
